@@ -1,0 +1,418 @@
+<script>
+// Global variables
+let allContentData = [];
+let currentEditId = null;
+
+// Initialize when page loads
+window.onload = function() {
+  loadData();
+  loadStatistics();
+};
+
+// Load all content data
+function loadData() {
+  showLoading(true);
+  
+  google.script.run
+    .withSuccessHandler(function(data) {
+      allContentData = data;
+      displayData(data);
+      showLoading(false);
+    })
+    .withFailureHandler(function(error) {
+      showToast('Error memuat data: ' + error, 'error');
+      showLoading(false);
+    })
+    .getAllContent();
+}
+
+// Display data in table
+function displayData(data) {
+  const tbody = document.getElementById('contentTableBody');
+  const table = document.getElementById('contentTable');
+  const noDataMsg = document.getElementById('noDataMessage');
+  
+  if (!data || data.length === 0) {
+    table.style.display = 'none';
+    noDataMsg.style.display = 'block';
+    return;
+  }
+  
+  table.style.display = 'table';
+  noDataMsg.style.display = 'none';
+  
+  tbody.innerHTML = '';
+  
+  data.forEach(content => {
+    const row = tbody.insertRow();
+    
+    // Tanggal Upload
+    const cellDate = row.insertCell();
+    cellDate.textContent = content.tanggalUpload || '-';
+    
+    // Hook
+    const cellHook = row.insertCell();
+    cellHook.className = 'text-preview';
+    cellHook.textContent = content.hook || '-';
+    cellHook.title = content.hook;
+    
+    // Body Utas
+    const cellBody = row.insertCell();
+    cellBody.className = 'text-preview';
+    cellBody.textContent = content.bodyUtas || '-';
+    cellBody.title = content.bodyUtas;
+    
+    // Soft Sell
+    const cellSoftSell = row.insertCell();
+    cellSoftSell.className = 'text-preview';
+    cellSoftSell.textContent = content.softSell || '-';
+    cellSoftSell.title = content.softSell;
+    
+    // Link
+    const cellLink = row.insertCell();
+    if (content.linkAffiliate) {
+      const link = document.createElement('a');
+      link.href = content.linkAffiliate;
+      link.target = '_blank';
+      link.textContent = 'Link';
+      cellLink.appendChild(link);
+    } else {
+      cellLink.textContent = '-';
+    }
+    
+    // Status
+    const cellStatus = row.insertCell();
+    const statusBadge = document.createElement('span');
+    statusBadge.className = 'status-badge ' + getStatusClass(content.statusKonten);
+    statusBadge.textContent = content.statusKonten || 'Draft';
+    cellStatus.appendChild(statusBadge);
+    
+    // Kategori
+    const cellKategori = row.insertCell();
+    cellKategori.textContent = content.kategori || '-';
+    
+    // Actions
+    const cellActions = row.insertCell();
+    cellActions.className = 'action-buttons';
+    
+    const viewBtn = document.createElement('button');
+    viewBtn.className = 'btn btn-view';
+    viewBtn.textContent = '👁️ Lihat';
+    viewBtn.onclick = function() { viewContent(content); };
+    
+    const editBtn = document.createElement('button');
+    editBtn.className = 'btn btn-edit';
+    editBtn.textContent = '✏️ Edit';
+    editBtn.onclick = function() { editContent(content); };
+    
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'btn btn-delete';
+    deleteBtn.textContent = '🗑️ Hapus';
+    deleteBtn.onclick = function() { deleteContent(content.id); };
+    
+    cellActions.appendChild(viewBtn);
+    cellActions.appendChild(editBtn);
+    cellActions.appendChild(deleteBtn);
+  });
+}
+
+// Get status class for badge
+function getStatusClass(status) {
+  const statusMap = {
+    'Draft': 'status-draft',
+    'Terjadwal': 'status-terjadwal',
+    'Dipublikasi': 'status-dipublikasi',
+    'Arsip': 'status-arsip'
+  };
+  return statusMap[status] || 'status-draft';
+}
+
+// Load statistics
+function loadStatistics() {
+  google.script.run
+    .withSuccessHandler(function(stats) {
+      document.getElementById('totalKonten').textContent = stats.total || 0;
+      document.getElementById('draftKonten').textContent = stats.draft || 0;
+      document.getElementById('scheduledKonten').textContent = stats.scheduled || 0;
+      document.getElementById('publishedKonten').textContent = stats.published || 0;
+    })
+    .withFailureHandler(function(error) {
+      console.error('Error loading statistics:', error);
+    })
+    .getStatistics();
+}
+
+// Show add form
+function showAddForm() {
+  currentEditId = null;
+  document.getElementById('formTitle').textContent = 'Tambah Konten Baru';
+  document.getElementById('contentForm').reset();
+  document.getElementById('contentId').value = '';
+  document.getElementById('submitBtn').textContent = 'Simpan';
+  
+  // Set default date to today
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('tanggalUpload').value = today;
+  
+  document.getElementById('formModal').style.display = 'block';
+}
+
+// Edit content
+function editContent(content) {
+  currentEditId = content.id;
+  document.getElementById('formTitle').textContent = 'Edit Konten';
+  document.getElementById('submitBtn').textContent = 'Update';
+  
+  // Fill form with content data
+  document.getElementById('contentId').value = content.id;
+  document.getElementById('tanggalUpload').value = content.tanggalUpload;
+  document.getElementById('hook').value = content.hook;
+  document.getElementById('bodyUtas').value = content.bodyUtas;
+  document.getElementById('softSell').value = content.softSell;
+  document.getElementById('linkAffiliate').value = content.linkAffiliate;
+  document.getElementById('statusKonten').value = content.statusKonten;
+  document.getElementById('kategori').value = content.kategori;
+  document.getElementById('targetAudience').value = content.targetAudience;
+  document.getElementById('hashtags').value = content.hashtags;
+  document.getElementById('notes').value = content.notes;
+  
+  document.getElementById('formModal').style.display = 'block';
+}
+
+// View content details
+function viewContent(content) {
+  let detailsHTML = `
+    <div style="padding: 20px;">
+      <h3 style="margin-bottom: 20px; color: #1a202c;">Detail Konten</h3>
+      
+      <div style="margin-bottom: 15px;">
+        <strong style="color: #4a5568;">ID:</strong><br>
+        <span style="color: #718096;">${content.id}</span>
+      </div>
+      
+      <div style="margin-bottom: 15px;">
+        <strong style="color: #4a5568;">Tanggal Upload:</strong><br>
+        <span style="color: #718096;">${content.tanggalUpload || '-'}</span>
+      </div>
+      
+      <div style="margin-bottom: 15px;">
+        <strong style="color: #4a5568;">Status:</strong><br>
+        <span class="status-badge ${getStatusClass(content.statusKonten)}">${content.statusKonten}</span>
+      </div>
+      
+      <div style="margin-bottom: 15px;">
+        <strong style="color: #4a5568;">Hook:</strong><br>
+        <p style="color: #2d3748; background: #f7fafc; padding: 12px; border-radius: 8px; white-space: pre-wrap;">${content.hook || '-'}</p>
+      </div>
+      
+      <div style="margin-bottom: 15px;">
+        <strong style="color: #4a5568;">Body Utas:</strong><br>
+        <p style="color: #2d3748; background: #f7fafc; padding: 12px; border-radius: 8px; white-space: pre-wrap;">${content.bodyUtas || '-'}</p>
+      </div>
+      
+      <div style="margin-bottom: 15px;">
+        <strong style="color: #4a5568;">Soft Sell:</strong><br>
+        <p style="color: #2d3748; background: #f7fafc; padding: 12px; border-radius: 8px; white-space: pre-wrap;">${content.softSell || '-'}</p>
+      </div>
+      
+      <div style="margin-bottom: 15px;">
+        <strong style="color: #4a5568;">Link Affiliate:</strong><br>
+        ${content.linkAffiliate ? `<a href="${content.linkAffiliate}" target="_blank">${content.linkAffiliate}</a>` : '-'}
+      </div>
+      
+      <div style="margin-bottom: 15px;">
+        <strong style="color: #4a5568;">Kategori:</strong><br>
+        <span style="color: #718096;">${content.kategori || '-'}</span>
+      </div>
+      
+      <div style="margin-bottom: 15px;">
+        <strong style="color: #4a5568;">Target Audience:</strong><br>
+        <span style="color: #718096;">${content.targetAudience || '-'}</span>
+      </div>
+      
+      <div style="margin-bottom: 15px;">
+        <strong style="color: #4a5568;">Hashtags:</strong><br>
+        <span style="color: #718096;">${content.hashtags || '-'}</span>
+      </div>
+      
+      <div style="margin-bottom: 15px;">
+        <strong style="color: #4a5568;">Notes:</strong><br>
+        <p style="color: #718096; background: #f7fafc; padding: 12px; border-radius: 8px; white-space: pre-wrap;">${content.notes || '-'}</p>
+      </div>
+      
+      <div style="margin-bottom: 15px;">
+        <strong style="color: #4a5568;">Tanggal Dibuat:</strong><br>
+        <span style="color: #718096;">${content.tanggalDibuat || '-'}</span>
+      </div>
+      
+      <div style="margin-bottom: 15px;">
+        <strong style="color: #4a5568;">Terakhir Diupdate:</strong><br>
+        <span style="color: #718096;">${content.terakhirDiupdate || '-'}</span>
+      </div>
+      
+      <div style="margin-top: 20px; text-align: right;">
+        <button class="btn btn-secondary" onclick="closeViewModal()">Tutup</button>
+      </div>
+    </div>
+  `;
+  
+  // Create modal for viewing
+  const viewModal = document.createElement('div');
+  viewModal.id = 'viewModal';
+  viewModal.className = 'modal';
+  viewModal.style.display = 'block';
+  viewModal.innerHTML = `
+    <div class="modal-content" style="max-width: 700px;">
+      <div class="modal-header">
+        <h2>Detail Konten</h2>
+        <span class="close" onclick="closeViewModal()">×</span>
+      </div>
+      ${detailsHTML}
+    </div>
+  `;
+  
+  document.body.appendChild(viewModal);
+}
+
+// Close view modal
+function closeViewModal() {
+  const viewModal = document.getElementById('viewModal');
+  if (viewModal) {
+    viewModal.remove();
+  }
+}
+
+// Delete content
+function deleteContent(id) {
+  if (!confirm('Apakah Anda yakin ingin menghapus konten ini?')) {
+    return;
+  }
+  
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.success) {
+        showToast(result.message, 'success');
+        loadData();
+        loadStatistics();
+      } else {
+        showToast(result.message, 'error');
+      }
+    })
+    .withFailureHandler(function(error) {
+      showToast('Error: ' + error, 'error');
+    })
+    .deleteContent(id);
+}
+
+// Submit form
+function submitForm(event) {
+  event.preventDefault();
+  
+  const formData = {
+    id: document.getElementById('contentId').value,
+    tanggalUpload: document.getElementById('tanggalUpload').value,
+    hook: document.getElementById('hook').value,
+    bodyUtas: document.getElementById('bodyUtas').value,
+    softSell: document.getElementById('softSell').value,
+    linkAffiliate: document.getElementById('linkAffiliate').value,
+    statusKonten: document.getElementById('statusKonten').value,
+    kategori: document.getElementById('kategori').value,
+    targetAudience: document.getElementById('targetAudience').value,
+    hashtags: document.getElementById('hashtags').value,
+    notes: document.getElementById('notes').value
+  };
+  
+  const isEdit = formData.id !== '';
+  
+  if (isEdit) {
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.success) {
+          showToast(result.message, 'success');
+          closeModal();
+          loadData();
+          loadStatistics();
+        } else {
+          showToast(result.message, 'error');
+        }
+      })
+      .withFailureHandler(function(error) {
+        showToast('Error: ' + error, 'error');
+      })
+      .updateContent(formData);
+  } else {
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.success) {
+          showToast(result.message, 'success');
+          closeModal();
+          loadData();
+          loadStatistics();
+        } else {
+          showToast(result.message, 'error');
+        }
+      })
+      .withFailureHandler(function(error) {
+        showToast('Error: ' + error, 'error');
+      })
+      .addContent(formData);
+  }
+}
+
+// Close modal
+function closeModal() {
+  document.getElementById('formModal').style.display = 'none';
+  document.getElementById('contentForm').reset();
+  currentEditId = null;
+}
+
+// Filter by status
+function filterByStatus() {
+  const status = document.getElementById('filterStatus').value;
+  
+  if (status === 'Semua') {
+    displayData(allContentData);
+  } else {
+    const filteredData = allContentData.filter(content => content.statusKonten === status);
+    displayData(filteredData);
+  }
+}
+
+// Refresh data
+function refreshData() {
+  showToast('Memuat ulang data...', 'info');
+  loadData();
+  loadStatistics();
+  document.getElementById('filterStatus').value = 'Semua';
+}
+
+// Show loading indicator
+function showLoading(show) {
+  document.getElementById('loadingIndicator').style.display = show ? 'block' : 'none';
+}
+
+// Show toast notification
+function showToast(message, type = 'info') {
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.className = 'toast ' + type;
+  toast.style.display = 'block';
+  
+  setTimeout(function() {
+    toast.style.display = 'none';
+  }, 3000);
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+  const modal = document.getElementById('formModal');
+  if (event.target === modal) {
+    closeModal();
+  }
+  
+  const viewModal = document.getElementById('viewModal');
+  if (event.target === viewModal) {
+    closeViewModal();
+  }
+}
+</script>
