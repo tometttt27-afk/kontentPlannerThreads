@@ -173,11 +173,9 @@ function displayData(data) {
     
     // Tanggal Upload
     const cellDate = row.insertCell();
-    cellDate.textContent = content.tanggalUpload || '-';
-    
-    // Jam Upload
-    const cellJam = row.insertCell();
-    cellJam.textContent = content.jamUpload || '-';
+    const dateDisplay = content.tanggalUpload || '-';
+    const jamDisplay = content.jamUpload ? ' ' + content.jamUpload : '';
+    cellDate.textContent = dateDisplay + jamDisplay;
     
     // Hook
     const cellHook = row.insertCell();
@@ -295,7 +293,6 @@ function editContent(content) {
   // Fill form with content data
   document.getElementById('contentId').value = content.id;
   document.getElementById('tanggalUpload').value = content.tanggalUpload;
-  document.getElementById('jamUpload').value = content.jamUpload || '';
   document.getElementById('hook').value = content.hook;
   document.getElementById('bodyUtas').value = content.bodyUtas;
   document.getElementById('softSell').value = content.softSell;
@@ -322,7 +319,7 @@ function viewContent(content) {
       
       <div style="margin-bottom: 15px;">
         <strong style="color: #4a5568;">Tanggal Upload:</strong><br>
-        <span style="color: #718096;">${content.tanggalUpload || '-'} ${content.jamUpload ? '⏰ ' + content.jamUpload : ''}</span>
+        <span style="color: #718096;">${content.tanggalUpload || '-'}</span>
       </div>
       
       <div style="margin-bottom: 15px;">
@@ -441,7 +438,6 @@ function submitForm(event) {
   const formData = {
     id: document.getElementById('contentId').value,
     tanggalUpload: document.getElementById('tanggalUpload').value,
-    jamUpload: document.getElementById('jamUpload').value,
     hook: document.getElementById('hook').value,
     bodyUtas: document.getElementById('bodyUtas').value,
     softSell: document.getElementById('softSell').value,
