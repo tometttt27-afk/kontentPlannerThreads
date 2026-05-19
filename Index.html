@@ -3,10 +3,16 @@
 <head>
   <base target="_top">
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Konten Planner">
+  <meta name="theme-color" content="#6366f1">
+  <meta name="description" content="Aplikasi untuk merencanakan dan mengelola konten Threads Anda dengan mudah">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%236366f1'><path d='M12 2L2 7v10c0 5.5 4 10 10 10s10-4.5 10-10V7l-10-5z'/><path d='M12 22V12' stroke='white' stroke-width='2'/></svg>">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%236366f1' width='180' height='180' rx='40'/><path fill='white' d='M90 40L30 70v60c0 33 24 60 60 60s60-27 60-60V70l-60-30z'/></svg>">
   <title>Konten Planner Threads</title>
   <?!= include('Styles'); ?>
 </head>
@@ -149,11 +155,11 @@
     <!-- Action Bar -->
     <div class="action-bar">
       <button class="btn btn-primary" onclick="showAddForm()">
-        ➕ Tambah Konten Baru
+        ➕ Tambah
       </button>
       
       <div class="filter-group">
-        <label for="filterStatus">Filter Status:</label>
+        <label for="filterStatus">Filter:</label>
         <select id="filterStatus" onchange="filterByStatus()">
           <option value="Semua">Semua</option>
           <option value="Draft">Draft</option>

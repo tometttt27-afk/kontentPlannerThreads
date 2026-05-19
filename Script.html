@@ -4,13 +4,99 @@ let allContentData = [];
 let currentEditId = null;
 let currentView = 'list';
 let currentCalendarDate = new Date();
+let currentTheme = localStorage.getItem('theme') || 'light';
+let currentThemeColor = localStorage.getItem('themeColor') || 'indigo';
+let touchStartX = 0;
+let touchEndX = 0;
 
 // Initialize when page loads
 window.onload = function() {
+  initTheme();
+  initPWA();
   loadData();
   loadStatistics();
   renderCalendar();
+  setupGestureControls();
 };
+
+// Initialize Theme
+function initTheme() {
+  // Apply saved theme
+  if (currentTheme === 'dark') {
+    document.body.classList.add('dark-mode');
+    updateThemeIcon(true);
+  }
+  
+  // Apply saved theme color
+  applyThemeColor(currentThemeColor);
+  
+  // Check system preference if no saved theme
+  if (!localStorage.getItem('theme') && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    toggleTheme();
+  }
+}
+
+// Apply theme color
+function applyThemeColor(color) {
+  const colorMap = {
+    'indigo': '#6366f1',
+    'blue': '#3b82f6',
+    'purple': '#a855f7',
+    'pink': '#ec4899',
+    'green': '#10b981',
+    'orange': '#f97316'
+  };
+  
+  const primaryColor = colorMap[color] || colorMap['indigo'];
+  const primaryDark = adjustColorBrightness(primaryColor, -20);
+  
+  document.documentElement.style.setProperty('--primary-color', primaryColor);
+  document.documentElement.style.setProperty('--primary-dark', primaryDark);
+  document.documentElement.style.setProperty('--primary-light', adjustColorBrightness(primaryColor, 20));
+}
+
+function adjustColorBrightness(hex, percent) {
+  const num = parseInt(hex.slice(1), 16);
+  const amt = Math.round(2.55 * percent);
+  const R = Math.max(0, (num >> 16) + amt);
+  const G = Math.max(0, (num >> 8 & 0x00FF) + amt);
+  const B = Math.max(0, (num & 0x0000FF) + amt);
+  return `#${(0x1000000 + (R < 255 ? R : 255) * 0x10000 + (G < 255 ? G : 255) * 0x100 + (B < 255 ? B : 255)).toString(16).slice(1)}`;
+}
+
+// Initialize PWA
+function initPWA() {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(err => {
+      console.log('PWA not available:', err);
+    });
+  }
+  
+  // Save app data periodically
+  setInterval(saveAppState, 300000); // Every 5 minutes
+}
+
+function saveAppState() {
+  localStorage.setItem('appState', JSON.stringify({
+    timestamp: new Date().toISOString(),
+    lastSync: new Date().getTime()
+  }));
+}
+
+// Setup Gesture Controls
+function setupGestureControls() {
+  const calendarDays = document.getElementById('calendarDays');
+  if (calendarDays) {
+    calendarDays.addEventListener('touchstart', e => {
+      touchStartX = e.changedTouches[0].screenX;
+    }, false);
+    
+    calendarDays.addEventListener('touchend', e => {
+      touchEndX = e.changedTouches[0].screenX;
+      handleSwipe();
+    }, false);
+  }
+}
 
 // Load all content data
 function loadData() {
@@ -569,26 +655,40 @@ function showCalendarContent(date, content) {
   } else {
     content.forEach(item => {
       const contentCard = document.createElement('div');
-      contentCard.style.cssText = 'border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 20px; margin-bottom: 16px; background: var(--light-bg);';
+      contentCard.style.cssText = 'border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px; margin-bottom: 12px; background: var(--light-bg); position: relative; touch-action: pan-y;';
+      contentCard.setAttribute('data-swipe-item', item.id);
+      
+      let startX = 0;
+      contentCard.addEventListener('touchstart', (e) => {
+        startX = e.touches[0].clientX;
+      });
+      
+      contentCard.addEventListener('touchend', (e) => {
+        const endX = e.changedTouches[0].clientX;
+        if (startX - endX > 100) {
+          // Swipe left - show delete option
+          showSwipeDelete(contentCard, item.id);
+        }
+      });
       
       contentCard.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
           <div>
             <span class="status-badge status-${getStatusSlug(item.statusKonten)}">${item.statusKonten}</span>
           </div>
-          <div style="display: flex; gap: 8px;">
-            <button class="btn btn-view" onclick="viewContent(${JSON.stringify(item).replace(/"/g, '&quot;')})">👁️ Lihat</button>
-            <button class="btn btn-edit" onclick="editContent(${JSON.stringify(item).replace(/"/g, '&quot;')})">✏️ Edit</button>
-            <button class="btn btn-delete" onclick="deleteContent('${item.id}')">🗑️ Hapus</button>
+          <div style="display: flex; gap: 6px;">
+            <button class="btn btn-view" onclick="viewContent(${JSON.stringify(item).replace(/"/g, '&quot;')})">👁️</button>
+            <button class="btn btn-edit" onclick="editContent(${JSON.stringify(item).replace(/"/g, '&quot;')})">✏️</button>
+            <button class="btn btn-delete" onclick="deleteContent('${item.id}')">🗑️</button>
           </div>
         </div>
         <div style="margin-bottom: 8px;">
           <strong style="color: var(--text-primary);">Hook:</strong><br>
-          <span style="color: var(--text-secondary);">${item.hook}</span>
+          <span style="color: var(--text-secondary); word-break: break-word;">${item.hook}</span>
         </div>
         <div style="margin-bottom: 8px;">
           <strong style="color: var(--text-primary);">Body:</strong><br>
-          <span style="color: var(--text-secondary);">${item.bodyUtas.substring(0, 100)}...</span>
+          <span style="color: var(--text-secondary); word-break: break-word;">${item.bodyUtas.substring(0, 100)}...</span>
         </div>
         ${item.kategori ? `<div style="font-size: 12px; color: var(--text-muted);">📁 ${item.kategori}</div>` : ''}
       `;
@@ -600,13 +700,67 @@ function showCalendarContent(date, content) {
   document.getElementById('calendarContentModal').style.display = 'block';
 }
 
+function showSwipeDelete(card, itemId) {
+  const deleteBtn = document.createElement('div');
+  deleteBtn.style.cssText = 'position: absolute; top: 0; right: 0; bottom: 0; background: var(--danger-color); display: flex; align-items: center; justify-content: center; color: white; width: 70px; cursor: pointer; border-radius: var(--radius-md); animation: slideIn 0.2s ease;';
+  deleteBtn.textContent = '🗑️ Hapus';
+  deleteBtn.onclick = () => deleteContent(itemId);
+  card.appendChild(deleteBtn);
+}
+
 function closeCalendarContentModal() {
   document.getElementById('calendarContentModal').style.display = 'none';
 }
 
-// Toggle theme (light/dark mode placeholder)
+// Toggle theme (light/dark mode)
 function toggleTheme() {
-  showToast('Dark mode coming soon!', 'info');
+  const isDark = document.body.classList.toggle('dark-mode');
+  currentTheme = isDark ? 'dark' : 'light';
+  localStorage.setItem('theme', currentTheme);
+  updateThemeIcon(isDark);
+  showToast(`${isDark ? 'Dark' : 'Light'} mode aktif`, 'info');
+}
+
+function updateThemeIcon(isDark) {
+  const sunIcon = document.getElementById('sunIcon');
+  const moonIcon = document.getElementById('moonIcon');
+  if (isDark) {
+    sunIcon.style.display = 'none';
+    moonIcon.style.display = 'block';
+  } else {
+    sunIcon.style.display = 'block';
+    moonIcon.style.display = 'none';
+  }
+}
+
+// Change theme color
+function changeThemeColor(color) {
+  currentThemeColor = color;
+  localStorage.setItem('themeColor', color);
+  applyThemeColor(color);
+  toggleColorPicker();
+  showToast(`Theme color berubah!`, 'success');
+}
+
+function toggleColorPicker() {
+  const picker = document.getElementById('colorPicker');
+  picker.style.display = picker.style.display === 'none' ? 'block' : 'none';
+}
+
+// Handle Swipe Gestures
+function handleSwipe() {
+  const swipeThreshold = 50;
+  const diff = touchStartX - touchEndX;
+  
+  if (Math.abs(diff) > swipeThreshold) {
+    if (diff > 0) {
+      // Swipe left - next month
+      nextMonth();
+    } else {
+      // Swipe right - previous month
+      previousMonth();
+    }
+  }
 }
 
 // Close modal when clicking outside
