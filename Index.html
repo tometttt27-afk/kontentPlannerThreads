@@ -15,30 +15,83 @@
     <!-- Header -->
     <header class="header">
       <div class="header-content">
-        <h1>📱 Konten Planner Threads</h1>
-        <p class="subtitle">Kelola konten utas Threads Anda dengan mudah</p>
+        <div class="header-left">
+          <div class="logo-container">
+            <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2L2 7v10c0 5.5 4 10 10 10s10-4.5 10-10V7l-10-5z"/>
+              <path d="M12 22V12"/>
+            </svg>
+            <div>
+              <h1>Konten Planner</h1>
+              <p class="subtitle">Threads Content Manager</p>
+            </div>
+          </div>
+        </div>
+        <div class="header-right">
+          <button class="btn-icon" onclick="toggleTheme()" title="Toggle Theme">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="5"/>
+              <path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+            </svg>
+          </button>
+        </div>
       </div>
       
       <!-- Statistics Cards -->
       <div class="stats-container">
-        <div class="stat-card">
-          <div class="stat-number" id="totalKonten">0</div>
-          <div class="stat-label">Total Konten</div>
+        <div class="stat-card stat-card-primary">
+          <div class="stat-icon">📊</div>
+          <div class="stat-content">
+            <div class="stat-number" id="totalKonten">0</div>
+            <div class="stat-label">Total Konten</div>
+          </div>
         </div>
-        <div class="stat-card">
-          <div class="stat-number" id="draftKonten">0</div>
-          <div class="stat-label">Draft</div>
+        <div class="stat-card stat-card-warning">
+          <div class="stat-icon">📝</div>
+          <div class="stat-content">
+            <div class="stat-number" id="draftKonten">0</div>
+            <div class="stat-label">Draft</div>
+          </div>
         </div>
-        <div class="stat-card">
-          <div class="stat-number" id="scheduledKonten">0</div>
-          <div class="stat-label">Terjadwal</div>
+        <div class="stat-card stat-card-info">
+          <div class="stat-icon">⏰</div>
+          <div class="stat-content">
+            <div class="stat-number" id="scheduledKonten">0</div>
+            <div class="stat-label">Terjadwal</div>
+          </div>
         </div>
-        <div class="stat-card">
-          <div class="stat-number" id="publishedKonten">0</div>
-          <div class="stat-label">Dipublikasi</div>
+        <div class="stat-card stat-card-success">
+          <div class="stat-icon">✅</div>
+          <div class="stat-content">
+            <div class="stat-number" id="publishedKonten">0</div>
+            <div class="stat-label">Dipublikasi</div>
+          </div>
         </div>
       </div>
     </header>
+
+    <!-- View Toggle -->
+    <div class="view-toggle-container">
+      <div class="view-toggle">
+        <button class="view-toggle-btn active" data-view="list" onclick="switchView('list')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="6" x2="21" y2="6"/>
+            <line x1="3" y1="12" x2="21" y2="12"/>
+            <line x1="3" y1="18" x2="21" y2="18"/>
+          </svg>
+          <span>List</span>
+        </button>
+        <button class="view-toggle-btn" data-view="calendar" onclick="switchView('calendar')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="4" width="18" height="18" rx="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          <span>Calendar</span>
+        </button>
+      </div>
+    </div>
 
     <!-- Action Bar -->
     <div class="action-bar">
@@ -147,37 +200,88 @@ Pisahkan setiap poin atau bagian dengan enter untuk memudahkan pembacaan." requi
       </div>
     </div>
 
-    <!-- Content Table -->
-    <div class="table-container">
-      <div id="loadingIndicator" class="loading">
-        <div class="spinner"></div>
-        <p>Memuat data...</p>
+    <!-- List View -->
+    <div id="listView" class="view-content">
+      <div class="table-container">
+        <div id="loadingIndicator" class="loading">
+          <div class="spinner"></div>
+          <p>Memuat data...</p>
+        </div>
+        
+        <div id="noDataMessage" class="no-data" style="display: none;">
+          <div class="no-data-icon">📝</div>
+          <h3>Belum Ada Konten</h3>
+          <p>Mulai buat konten pertama Anda dengan klik tombol "Tambah Konten Baru"</p>
+        </div>
+        
+        <div class="mobile-scroll-hint mobile-only">
+          ← Geser ke kiri/kanan untuk melihat semua kolom →
+        </div>
+        
+        <table id="contentTable" style="display: none;">
+          <thead>
+            <tr>
+              <th>Tanggal Upload</th>
+              <th>Hook</th>
+              <th>Body Utas</th>
+              <th>Soft Sell</th>
+              <th>Link</th>
+              <th>Status</th>
+              <th>Kategori</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="contentTableBody">
+          </tbody>
+        </table>
       </div>
-      
-      <div id="noDataMessage" class="no-data" style="display: none;">
-        <p>📝 Belum ada konten. Klik "Tambah Konten Baru" untuk memulai!</p>
+    </div>
+
+    <!-- Calendar View -->
+    <div id="calendarView" class="view-content" style="display: none;">
+      <div class="calendar-container">
+        <div class="calendar-header">
+          <button class="btn-icon" onclick="previousMonth()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="15 18 9 12 15 6"/>
+            </svg>
+          </button>
+          <h2 id="calendarMonthYear">Januari 2024</h2>
+          <button class="btn-icon" onclick="nextMonth()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </button>
+        </div>
+        
+        <div class="calendar-weekdays">
+          <div class="calendar-weekday">Min</div>
+          <div class="calendar-weekday">Sen</div>
+          <div class="calendar-weekday">Sel</div>
+          <div class="calendar-weekday">Rab</div>
+          <div class="calendar-weekday">Kam</div>
+          <div class="calendar-weekday">Jum</div>
+          <div class="calendar-weekday">Sab</div>
+        </div>
+        
+        <div class="calendar-days" id="calendarDays">
+          <!-- Calendar days will be generated here -->
+        </div>
       </div>
-      
-      <div class="mobile-scroll-hint mobile-only">
-        ← Geser ke kiri/kanan untuk melihat semua kolom →
+    </div>
+
+    <!-- Calendar Content Modal -->
+    <div id="calendarContentModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="calendarContentTitle">Konten - 1 Januari 2024</h2>
+          <span class="close" onclick="closeCalendarContentModal()">×</span>
+        </div>
+        
+        <div class="modal-body" id="calendarContentBody">
+          <!-- Content for selected date will be shown here -->
+        </div>
       </div>
-      
-      <table id="contentTable" style="display: none;">
-        <thead>
-          <tr>
-            <th>Tanggal Upload</th>
-            <th>Hook</th>
-            <th>Body Utas</th>
-            <th>Soft Sell</th>
-            <th>Link</th>
-            <th>Status</th>
-            <th>Kategori</th>
-            <th>Aksi</th>
-          </tr>
-        </thead>
-        <tbody id="contentTableBody">
-        </tbody>
-      </table>
     </div>
 
     <!-- Toast Notification -->

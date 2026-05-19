@@ -2,11 +2,14 @@
 // Global variables
 let allContentData = [];
 let currentEditId = null;
+let currentView = 'list';
+let currentCalendarDate = new Date();
 
 // Initialize when page loads
 window.onload = function() {
   loadData();
   loadStatistics();
+  renderCalendar();
 };
 
 // Load all content data
@@ -403,6 +406,209 @@ function showToast(message, type = 'info') {
   }, 3000);
 }
 
+// Switch between list and calendar view
+function switchView(view) {
+  currentView = view;
+  
+  // Update toggle buttons
+  document.querySelectorAll('.view-toggle-btn').forEach(btn => {
+    btn.classList.remove('active');
+    if (btn.getAttribute('data-view') === view) {
+      btn.classList.add('active');
+    }
+  });
+  
+  // Show/hide views
+  document.getElementById('listView').style.display = view === 'list' ? 'block' : 'none';
+  document.getElementById('calendarView').style.display = view === 'calendar' ? 'block' : 'none';
+  
+  if (view === 'calendar') {
+    renderCalendar();
+  }
+}
+
+// Calendar Functions
+function renderCalendar() {
+  const year = currentCalendarDate.getFullYear();
+  const month = currentCalendarDate.getMonth();
+  
+  // Update month/year display
+  const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
+                      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+  document.getElementById('calendarMonthYear').textContent = `${monthNames[month]} ${year}`;
+  
+  // Get first day of month and number of days
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const daysInPrevMonth = new Date(year, month, 0).getDate();
+  
+  const calendarDays = document.getElementById('calendarDays');
+  calendarDays.innerHTML = '';
+  
+  // Previous month days
+  for (let i = firstDay - 1; i >= 0; i--) {
+    const day = daysInPrevMonth - i;
+    const dayEl = createCalendarDay(day, true);
+    calendarDays.appendChild(dayEl);
+  }
+  
+  // Current month days
+  const today = new Date();
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = new Date(year, month, day);
+    const dateString = formatDateForComparison(date);
+    const isToday = date.toDateString() === today.toDateString();
+    
+    // Get content for this date
+    const dayContent = allContentData.filter(content => {
+      return content.tanggalUpload === dateString;
+    });
+    
+    const dayEl = createCalendarDay(day, false, isToday, dayContent, date);
+    calendarDays.appendChild(dayEl);
+  }
+  
+  // Next month days
+  const totalCells = calendarDays.children.length;
+  const remainingCells = 42 - totalCells; // 6 rows * 7 days
+  for (let day = 1; day <= remainingCells; day++) {
+    const dayEl = createCalendarDay(day, true);
+    calendarDays.appendChild(dayEl);
+  }
+}
+
+function createCalendarDay(day, isOtherMonth, isToday = false, content = [], date = null) {
+  const dayEl = document.createElement('div');
+  dayEl.className = 'calendar-day';
+  
+  if (isOtherMonth) {
+    dayEl.classList.add('other-month');
+  }
+  
+  if (isToday) {
+    dayEl.classList.add('today');
+  }
+  
+  const dayNumber = document.createElement('div');
+  dayNumber.className = 'calendar-day-number';
+  dayNumber.textContent = day;
+  dayEl.appendChild(dayNumber);
+  
+  if (!isOtherMonth && content.length > 0) {
+    const contentContainer = document.createElement('div');
+    contentContainer.className = 'calendar-day-content';
+    
+    // Show max 3 items
+    const maxShow = 3;
+    content.slice(0, maxShow).forEach(item => {
+      const badge = document.createElement('div');
+      badge.className = `calendar-content-badge ${getStatusSlug(item.statusKonten)}`;
+      badge.textContent = item.hook.substring(0, 20) + '...';
+      badge.title = item.hook;
+      contentContainer.appendChild(badge);
+    });
+    
+    if (content.length > maxShow) {
+      const countEl = document.createElement('div');
+      countEl.className = 'calendar-content-count';
+      countEl.textContent = `+${content.length - maxShow} lainnya`;
+      contentContainer.appendChild(countEl);
+    }
+    
+    dayEl.appendChild(contentContainer);
+    
+    // Add click handler
+    dayEl.style.cursor = 'pointer';
+    dayEl.onclick = function() {
+      showCalendarContent(date, content);
+    };
+  }
+  
+  return dayEl;
+}
+
+function getStatusSlug(status) {
+  const slugMap = {
+    'Draft': 'draft',
+    'Terjadwal': 'scheduled',
+    'Dipublikasi': 'published',
+    'Arsip': 'archived'
+  };
+  return slugMap[status] || 'draft';
+}
+
+function formatDateForComparison(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function previousMonth() {
+  currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
+  renderCalendar();
+}
+
+function nextMonth() {
+  currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
+  renderCalendar();
+}
+
+function showCalendarContent(date, content) {
+  const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
+                      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+  
+  const dateString = `${date.getDate()} ${monthNames[date.getMonth()]} ${date.getFullYear()}`;
+  document.getElementById('calendarContentTitle').textContent = `Konten - ${dateString}`;
+  
+  const contentBody = document.getElementById('calendarContentBody');
+  contentBody.innerHTML = '';
+  
+  if (content.length === 0) {
+    contentBody.innerHTML = '<div class="no-data"><p>Tidak ada konten untuk tanggal ini</p></div>';
+  } else {
+    content.forEach(item => {
+      const contentCard = document.createElement('div');
+      contentCard.style.cssText = 'border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 20px; margin-bottom: 16px; background: var(--light-bg);';
+      
+      contentCard.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+          <div>
+            <span class="status-badge status-${getStatusSlug(item.statusKonten)}">${item.statusKonten}</span>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-view" onclick="viewContent(${JSON.stringify(item).replace(/"/g, '&quot;')})">👁️ Lihat</button>
+            <button class="btn btn-edit" onclick="editContent(${JSON.stringify(item).replace(/"/g, '&quot;')})">✏️ Edit</button>
+            <button class="btn btn-delete" onclick="deleteContent('${item.id}')">🗑️ Hapus</button>
+          </div>
+        </div>
+        <div style="margin-bottom: 8px;">
+          <strong style="color: var(--text-primary);">Hook:</strong><br>
+          <span style="color: var(--text-secondary);">${item.hook}</span>
+        </div>
+        <div style="margin-bottom: 8px;">
+          <strong style="color: var(--text-primary);">Body:</strong><br>
+          <span style="color: var(--text-secondary);">${item.bodyUtas.substring(0, 100)}...</span>
+        </div>
+        ${item.kategori ? `<div style="font-size: 12px; color: var(--text-muted);">📁 ${item.kategori}</div>` : ''}
+      `;
+      
+      contentBody.appendChild(contentCard);
+    });
+  }
+  
+  document.getElementById('calendarContentModal').style.display = 'block';
+}
+
+function closeCalendarContentModal() {
+  document.getElementById('calendarContentModal').style.display = 'none';
+}
+
+// Toggle theme (light/dark mode placeholder)
+function toggleTheme() {
+  showToast('Dark mode coming soon!', 'info');
+}
+
 // Close modal when clicking outside
 window.onclick = function(event) {
   const modal = document.getElementById('formModal');
@@ -413,6 +619,11 @@ window.onclick = function(event) {
   const viewModal = document.getElementById('viewModal');
   if (event.target === viewModal) {
     closeViewModal();
+  }
+  
+  const calendarModal = document.getElementById('calendarContentModal');
+  if (event.target === calendarModal) {
+    closeCalendarContentModal();
   }
 }
 </script>
