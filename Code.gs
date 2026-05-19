@@ -13,6 +13,7 @@ function getSheet() {
     const headers = [
       'ID',
       'Tanggal Upload',
+      'Jam Upload',
       'Hook',
       'Body Utas',
       'Soft Sell',
@@ -57,22 +58,23 @@ function getAllContent() {
     return [];
   }
   
-  const data = sheet.getRange(2, 1, lastRow - 1, 13).getValues();
+  const data = sheet.getRange(2, 1, lastRow - 1, 14).getValues();
   
   return data.map(row => ({
     id: row[0],
     tanggalUpload: row[1] ? Utilities.formatDate(new Date(row[1]), Session.getScriptTimeZone(), 'yyyy-MM-dd') : '',
-    hook: row[2],
-    bodyUtas: row[3],
-    softSell: row[4],
-    linkAffiliate: row[5],
-    statusKonten: row[6],
-    kategori: row[7],
-    targetAudience: row[8],
-    hashtags: row[9],
-    notes: row[10],
-    tanggalDibuat: row[11] ? Utilities.formatDate(new Date(row[11]), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss') : '',
-    terakhirDiupdate: row[12] ? Utilities.formatDate(new Date(row[12]), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss') : ''
+    jamUpload: row[2] || '',
+    hook: row[3],
+    bodyUtas: row[4],
+    softSell: row[5],
+    linkAffiliate: row[6],
+    statusKonten: row[7],
+    kategori: row[8],
+    targetAudience: row[9],
+    hashtags: row[10],
+    notes: row[11],
+    tanggalDibuat: row[12] ? Utilities.formatDate(new Date(row[12]), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss') : '',
+    terakhirDiupdate: row[13] ? Utilities.formatDate(new Date(row[13]), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss') : ''
   }));
 }
 
@@ -91,6 +93,7 @@ function addContent(data) {
     const newRow = [
       id,
       data.tanggalUpload || '',
+      data.jamUpload || '',
       data.hook || '',
       data.bodyUtas || '',
       data.softSell || '',
@@ -144,16 +147,17 @@ function updateContent(data) {
     const timestamp = new Date();
     
     sheet.getRange(rowIndex, 2).setValue(data.tanggalUpload || '');
-    sheet.getRange(rowIndex, 3).setValue(data.hook || '');
-    sheet.getRange(rowIndex, 4).setValue(data.bodyUtas || '');
-    sheet.getRange(rowIndex, 5).setValue(data.softSell || '');
-    sheet.getRange(rowIndex, 6).setValue(data.linkAffiliate || '');
-    sheet.getRange(rowIndex, 7).setValue(data.statusKonten || 'Draft');
-    sheet.getRange(rowIndex, 8).setValue(data.kategori || '');
-    sheet.getRange(rowIndex, 9).setValue(data.targetAudience || '');
-    sheet.getRange(rowIndex, 10).setValue(data.hashtags || '');
-    sheet.getRange(rowIndex, 11).setValue(data.notes || '');
-    sheet.getRange(rowIndex, 13).setValue(timestamp);
+    sheet.getRange(rowIndex, 3).setValue(data.jamUpload || '');
+    sheet.getRange(rowIndex, 4).setValue(data.hook || '');
+    sheet.getRange(rowIndex, 5).setValue(data.bodyUtas || '');
+    sheet.getRange(rowIndex, 6).setValue(data.softSell || '');
+    sheet.getRange(rowIndex, 7).setValue(data.linkAffiliate || '');
+    sheet.getRange(rowIndex, 8).setValue(data.statusKonten || 'Draft');
+    sheet.getRange(rowIndex, 9).setValue(data.kategori || '');
+    sheet.getRange(rowIndex, 10).setValue(data.targetAudience || '');
+    sheet.getRange(rowIndex, 11).setValue(data.hashtags || '');
+    sheet.getRange(rowIndex, 12).setValue(data.notes || '');
+    sheet.getRange(rowIndex, 14).setValue(timestamp);
     
     return {
       success: true,
